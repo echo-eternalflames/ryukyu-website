@@ -431,9 +431,53 @@ elif current_page == "藏品概览":
         .card {{ background: #fff; border-radius: 6px; border: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 2px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; flex-shrink: 0; transition: transform 0.1s linear, opacity 0.1s linear; will-change: transform; cursor: pointer; }}
         .card img {{ display: block; width: auto; height: 120px; max-width: none; object-fit: contain; border-radius: 4px; margin-bottom: 2px; }}
         .card-name {{ width: 100%; height: 24px; font-size: 12px; font-weight: bold; color: #203050; text-align: center; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+
+        /* 新增四边触控按钮样式 */
+        .scroll-ctrl-btn {{
+            position:absolute;
+            background:rgba(32,48,80,0.6);
+            color:#ffffff;
+            font-size:22px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            z-index:200;
+            user-select:none;
+            touch-action:none;
+            border-radius:4px;
+        }}
+        .scroll-ctrl-btn:active{{background:rgba(32,48,80,0.9);}}
+
+        /* 左右：竖长方形 */
+        .btn-left {{ 
+            left:5px; top:50%; transform:translateY(-50%);
+            width:36px; height:70px;
+        }}
+        .btn-right {{ 
+            right:5px; top:50%; transform:translateY(-50%);
+            width:36px; height:70px;
+        }}
+
+        /* 上下：横长方形，横过来 */
+        .btn-top {{ 
+            top:5px; left:50%; transform:translateX(-50%);
+            width:70px; height:36px;
+        }}
+        .btn-bottom {{ 
+            bottom:12px; left:50%; transform:translateX(-50%);
+            width:70px; height:36px;
+        }}
+
     </style>
 
-    <div id="viewport"><div id="grid"></div></div>
+    <div id="viewport">
+        <div id="grid"></div>
+        <!-- 四个长按滑动按钮，恢复原始实心三角箭头 -->
+        <div class="scroll-ctrl-btn btn-left" data-dir="left">◀</div>
+        <div class="scroll-ctrl-btn btn-right" data-dir="right">▶</div>
+        <div class="scroll-ctrl-btn btn-top" data-dir="top">▲</div>
+        <div class="scroll-ctrl-btn btn-bottom" data-dir="bottom">▼</div>
+    </div>
 
     <script>
         const galleryData = {data_json};
@@ -451,20 +495,77 @@ elif current_page == "藏品概览":
         const MAX_X = 800; const MIN_X = -800; const MIN_Y = -800;
         let offsetX = 0, offsetY = 0, targetSpeedX = 0, targetSpeedY = 0, currentSpeedX = 0, currentSpeedY = 0;
         let mousePos = {{ x: viewport.clientWidth / 2, y: viewport.clientHeight / 2 }};
-        viewport.addEventListener('mousemove', (e) => {{ const rect = viewport.getBoundingClientRect(); mousePos.x = e.clientX - rect.left; mousePos.y = e.clientY - rect.top; }});
-        viewport.addEventListener('mouseleave', () => {{ targetSpeedX = 0; targetSpeedY = 0; }});
+
+        // ========== 新增长按按钮控制逻辑 ==========
+        let holdTimer = null;
+        const holdSpeed = 4.5; //长按滑动速度，可以调大小
+
+        function startHoldScroll(direction){{
+            stopHoldScroll();
+            holdTimer = setInterval(()=>{{
+                switch(direction){{
+                    case "left": targetSpeedX = holdSpeed; break;
+                    case "right": targetSpeedX = -holdSpeed; break;
+                    case "top": targetSpeedY = holdSpeed; break;
+                    case "bottom": targetSpeedY = -holdSpeed; break;
+                }}
+            }},25);
+        }}
+        function stopHoldScroll(){{
+            if(holdTimer){{
+                clearInterval(holdTimer);
+                holdTimer = null;
+            }}
+        }}
+
+        document.querySelectorAll('.scroll-ctrl-btn').forEach(btn=>{{
+            const dir = btn.dataset.dir;
+            //鼠标事件
+            btn.addEventListener('mousedown', ()=>startHoldScroll(dir));
+            btn.addEventListener('mouseup', stopHoldScroll);
+            btn.addEventListener('mouseleave', stopHoldScroll);
+            //触屏事件
+            btn.addEventListener('touchstart', (e)=>{{
+                e.preventDefault();
+                startHoldScroll(dir);
+            }});
+            btn.addEventListener('touchend', (e)=>{{
+                e.preventDefault();
+                stopHoldScroll();
+            }});
+        }});
+        // =========================================
+
+        viewport.addEventListener('mousemove', (e) => {{
+            const rect = viewport.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        }});
+        viewport.addEventListener('mouseleave', () => {{
+            targetSpeedX = 0; targetSpeedY = 0;
+        }});
+
         function update() {{
             let desiredSpeedX = (viewport.clientWidth / 2 - mousePos.x) * 0.04;
             let desiredSpeedY = (viewport.clientHeight / 2 - mousePos.y) * 0.05;
-            if ((desiredSpeedX > 0 && offsetX >= MAX_X) || (desiredSpeedX < 0 && offsetX <= MIN_X)) desiredSpeedX = 0;
-            if ((desiredSpeedY > 0 && offsetY >= 0) || (desiredSpeedY < 0 && offsetY <= MIN_Y)) desiredSpeedY = 0;
-            targetSpeedX = desiredSpeedX; targetSpeedY = desiredSpeedY;
-            currentSpeedX += (targetSpeedX - currentSpeedX) * 0.1; currentSpeedY += (targetSpeedY - currentSpeedY) * 0.1;
+
+            // 如果按钮长按正在运行，不被鼠标位置覆盖速度
+            if(!holdTimer){{
+                if ((desiredSpeedX > 0 && offsetX >= MAX_X) || (desiredSpeedX < 0 && offsetX <= MIN_X)) desiredSpeedX = 0;
+                if ((desiredSpeedY > 0 && offsetY >= 0) || (desiredSpeedY < 0 && offsetY <= MIN_Y)) desiredSpeedY = 0;
+                targetSpeedX = desiredSpeedX; targetSpeedY = desiredSpeedY;
+            }}
+
+            currentSpeedX += (targetSpeedX - currentSpeedX) * 0.1;
+            currentSpeedY += (targetSpeedY - currentSpeedY) * 0.1;
             currentSpeedX *= 0.95; currentSpeedY *= 0.95;
+
             offsetX += currentSpeedX; offsetY += currentSpeedY;
             if (offsetX > MAX_X) offsetX = MAX_X; if (offsetX < MIN_X) offsetX = MIN_X;
             if (offsetY > 0) offsetY = 0; if (offsetY < MIN_Y) offsetY = MIN_Y;
+
             grid.style.transform = `translate(calc(-50% + ${{offsetX}}px), ${{offsetY}}px)`;
+
             cards.forEach(card => {{
                 const rect = card.getBoundingClientRect();
                 const cardCenterX = rect.left + rect.width / 2;
@@ -516,7 +617,6 @@ elif current_page == "藏品概览":
                 max-width: 100%;
                 max-height: 100%;
                 object-fit: contain;
-                /* ===新增小图放大规则=== */
                 min-width: 50%;
                 min-height: 50%;
             }}
@@ -662,6 +762,8 @@ elif current_page == "藏品概览":
     </script>
     """
     components.html(html_code, height=675)
+
+
 
 # ===================== 历史脉络 =====================
 elif current_page == "历史脉络":
