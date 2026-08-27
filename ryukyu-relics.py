@@ -498,7 +498,7 @@ elif current_page == "藏品概览":
 
         // ========== 新增长按按钮控制逻辑 ==========
         let holdTimer = null;
-        const holdSpeed = 4.5; //长按滑动速度，可以调大小
+        const holdSpeed = 10; //长按滑动速度，可以调大小
 
         function startHoldScroll(direction){{
             stopHoldScroll();
