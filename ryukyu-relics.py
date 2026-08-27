@@ -448,7 +448,7 @@ elif current_page == "藏品概览":
         }}
         .scroll-ctrl-btn:active{{background:rgba(32,48,80,0.9);}}
 
-        /* 左右：竖长方形 */
+        /* 左右：竖长方形，左右贴边5px */
         .btn-left {{ 
             left:5px; top:50%; transform:translateY(-50%);
             width:36px; height:70px;
@@ -458,7 +458,7 @@ elif current_page == "藏品概览":
             width:36px; height:70px;
         }}
 
-        /* 上下：横长方形，横过来 */
+        /* 上下：横长方形，顶部贴边5px，底部贴边12px */
         .btn-top {{ 
             top:5px; left:50%; transform:translateX(-50%);
             width:70px; height:36px;
@@ -472,7 +472,7 @@ elif current_page == "藏品概览":
 
     <div id="viewport">
         <div id="grid"></div>
-        <!-- 四个长按滑动按钮，恢复原始实心三角箭头 -->
+        <!-- 四个长按滑动按钮，原始实心三角箭头 -->
         <div class="scroll-ctrl-btn btn-left" data-dir="left">◀</div>
         <div class="scroll-ctrl-btn btn-right" data-dir="right">▶</div>
         <div class="scroll-ctrl-btn btn-top" data-dir="top">▲</div>
@@ -496,9 +496,9 @@ elif current_page == "藏品概览":
         let offsetX = 0, offsetY = 0, targetSpeedX = 0, targetSpeedY = 0, currentSpeedX = 0, currentSpeedY = 0;
         let mousePos = {{ x: viewport.clientWidth / 2, y: viewport.clientHeight / 2 }};
 
-        // ========== 新增长按按钮控制逻辑 ==========
+        // ========== 新增长按按钮控制逻辑，长按速度调整为30 ==========
         let holdTimer = null;
-        const holdSpeed = 20; //长按滑动速度，可以调大小
+        const holdSpeed = 30;
 
         function startHoldScroll(direction){{
             stopHoldScroll();
@@ -549,7 +549,7 @@ elif current_page == "藏品概览":
             let desiredSpeedX = (viewport.clientWidth / 2 - mousePos.x) * 0.04;
             let desiredSpeedY = (viewport.clientHeight / 2 - mousePos.y) * 0.05;
 
-            // 如果按钮长按正在运行，不被鼠标位置覆盖速度
+            // 如果按钮长按正在运行：跳过鼠标漫游的边界拦截，仅在update末尾统一做硬边界钳位，修复未到底就停止bug
             if(!holdTimer){{
                 if ((desiredSpeedX > 0 && offsetX >= MAX_X) || (desiredSpeedX < 0 && offsetX <= MIN_X)) desiredSpeedX = 0;
                 if ((desiredSpeedY > 0 && offsetY >= 0) || (desiredSpeedY < 0 && offsetY <= MIN_Y)) desiredSpeedY = 0;
@@ -762,6 +762,7 @@ elif current_page == "藏品概览":
     </script>
     """
     components.html(html_code, height=675)
+
 
 
 
